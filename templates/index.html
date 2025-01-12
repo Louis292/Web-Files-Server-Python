@@ -2,6 +2,33 @@
 <html>
 <head>
     <title>File Browser</title>
+    <!-- Font Awesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin: 10px 0;
+        }
+        a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .icon {
+            margin-right: 10px;
+        }
+        form {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
     <h1>File Browser</h1>
@@ -9,11 +36,15 @@
         {% for file in files %}
         <li>
             {% if '.' in file %}
+                <!-- File Icon -->
+                <i class="fas fa-file icon"></i>
                 <a href="/browse/{{ current_path }}/{{ file }}">{{ file }}</a>
                 <a href="/browse/{{ current_path }}/{{ file }}?download=true">
                     <button>Download</button>
                 </a>
             {% else %}
+                <!-- Folder Icon -->
+                <i class="fas fa-folder icon"></i>
                 <a href="/browse/{{ current_path }}/{{ file }}/">{{ file }}/</a>
             {% endif %}
         </li>

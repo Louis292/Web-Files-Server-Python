@@ -1,0 +1,7 @@
+secret_key: "votre_cle_secrete"
+users:
+  admin: "password"
+  user1: "user1password"
+api_keys:
+  user1: "api_key_12345"
+  user2: "api_key_67890"

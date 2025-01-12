@@ -92,8 +92,10 @@ api_keys:
 Démarrez l'application Flask en mode debug :
 
 ```bash
-python app.py
+python start.py
 ```
+
+Ou ouvrer le fichier ```start.bat```
 
 5. Accédez à l'application :
 

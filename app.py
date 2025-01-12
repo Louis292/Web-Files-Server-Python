@@ -3,13 +3,15 @@ import yaml
 from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
-
-app = Flask(__name__)
+import logging
+from logging.handlers import RotatingFileHandler
 
 # Chargement de la configuration depuis config.yml
 with open("config.yml", "r") as config_file:
     config = yaml.safe_load(config_file)
 
+# Configuration de l'application Flask
+app = Flask(__name__)
 app.secret_key = config["secret_key"]
 
 # Configuration du gestionnaire de connexions
@@ -21,12 +23,28 @@ login_manager.login_view = "login"
 BASE_UPLOAD_FOLDER = "uploads"
 os.makedirs(BASE_UPLOAD_FOLDER, exist_ok=True)
 
+# Extensions de fichiers autorisées
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif", "py", "java"}
 
 # Gestion des utilisateurs et des clés API
 users = config["users"]  # Exemple : {"admin": "password"}
 api_keys = config["api_keys"]  # Exemple : {"user1": "api_key_12345"}
 
+# Chargement de la configuration des logs
+LOGGING_ENABLED = config.get("logging", {}).get("enabled", True)
+LOG_FILE = config.get("logging", {}).get("log_file", "logs/app.log")
+
+# Configuration des logs
+if LOGGING_ENABLED:
+    os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+    log_handler = RotatingFileHandler(LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5)
+    log_handler.setLevel(logging.INFO)
+    log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    log_handler.setFormatter(log_formatter)
+    app.logger.addHandler(log_handler)
+    app.logger.setLevel(logging.INFO)
+
+# Classe utilisateur pour Flask-Login
 class User(UserMixin):
     def __init__(self, id):
         self.id = id
@@ -45,16 +63,23 @@ def verify_api_key(api_key):
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# Routes de l'application
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
+
         if username in users and users[username] == password:
             user = User(username)
             login_user(user)
+            if LOGGING_ENABLED:
+                app.logger.info(f"Authentication success: {username}")
             return redirect(url_for("browse"))
-        return "Invalid credentials", 401
+        else:
+            if LOGGING_ENABLED:
+                app.logger.warning(f"Authentication failed: {username}")
+            return "Invalid credentials", 401
     return render_template("login.html")
 
 @app.route("/logout")
@@ -75,60 +100,47 @@ def browse(subpath):
     current_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
     current_path = os.path.abspath(current_path)
 
-    # Vérifie que le chemin reste dans BASE_UPLOAD_FOLDER
     if not current_path.startswith(os.path.abspath(BASE_UPLOAD_FOLDER)):
         abort(404)
 
-    # Si c'est un dossier, affiche son contenu
     if os.path.isdir(current_path):
+        if LOGGING_ENABLED:
+            app.logger.info(f"User {current_user.id} navigated to directory: {current_path}")
         files = os.listdir(current_path)
         return render_template("index.html", files=files, current_path=subpath)
 
-    # Télécharge un fichier si 'download' est dans l'URL
     elif os.path.isfile(current_path) and "download" in request.args:
+        if LOGGING_ENABLED:
+            app.logger.info(f"User {current_user.id} downloaded file: {current_path}")
         return send_from_directory(os.path.dirname(current_path), os.path.basename(current_path), as_attachment=True)
 
     abort(404)
 
-
 @app.route("/upload/<path:subpath>", methods=["POST"])
 @login_required
-def upload_file(subpath):
+def upload(subpath):
     current_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
-    if not os.path.exists(current_path) or not os.path.isdir(current_path):
+    current_path = os.path.abspath(current_path)
+
+    if not current_path.startswith(os.path.abspath(BASE_UPLOAD_FOLDER)):
         abort(404)
+
     if "file" not in request.files:
         return "No file part", 400
+
     file = request.files["file"]
     if file.filename == "":
         return "No selected file", 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(current_path, filename)
-        file.save(filepath)
-        return jsonify({"message": "File uploaded successfully", "filename": filename})
-    return "Invalid file type", 400
 
-@app.route("/api/upload", methods=["POST"])
-def api_upload():
-    api_key = request.headers.get("X-API-KEY")
-    if not verify_api_key(api_key):
-        return jsonify({"error": "Invalid API key"}), 403
-    subpath = request.args.get("path", "")
-    current_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
-    if not os.path.exists(current_path) or not os.path.isdir(current_path):
-        return jsonify({"error": "Invalid path"}), 404
-    if "file" not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(current_path, filename)
-        file.save(filepath)
-        return jsonify({"message": "File uploaded successfully", "filename": filename})
-    return jsonify({"error": "Invalid file type"}), 400
+    filename = secure_filename(file.filename)
+    save_path = os.path.join(current_path, filename)
+
+    file.save(save_path)
+
+    if LOGGING_ENABLED:
+        app.logger.info(f"User {current_user.id} uploaded file: {save_path}")
+
+    return redirect(url_for("browse", subpath=subpath))
 
 @app.route("/create/<path:subpath>", methods=["POST"])
 @login_required
@@ -145,14 +157,47 @@ def create_file(subpath):
         f.write(content)
     return jsonify({"message": "File created successfully", "filename": filename})
 
+@app.route("/api/upload", methods=["POST"])
+def api_upload():
+    api_key = request.headers.get("X-API-KEY")
+    if not verify_api_key(api_key):
+        return jsonify({"error": "Invalid API key"}), 403
+
+    subpath = request.args.get("path", "")
+    current_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
+
+    if not os.path.exists(current_path) or not os.path.isdir(current_path):
+        return jsonify({"error": "Invalid path"}), 404
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(current_path, filename)
+        file.save(filepath)
+        if LOGGING_ENABLED:
+            app.logger.info(f"File uploaded via API: {filepath}")
+        return jsonify({"message": "File uploaded successfully", "filename": filename})
+
+    return jsonify({"error": "Invalid file type"}), 400
+
 @app.route("/api/download/<path:subpath>")
 def api_download(subpath):
     api_key = request.headers.get("X-API-KEY")
     if not verify_api_key(api_key):
         return jsonify({"error": "Invalid API key"}), 403
+
     filepath = os.path.join(BASE_UPLOAD_FOLDER, subpath)
     if os.path.exists(filepath) and os.path.isfile(filepath):
-        return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath))
+        if LOGGING_ENABLED:
+            app.logger.info(f"File downloaded via API: {filepath}")
+        return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath), as_attachment=True)
+
     return jsonify({"error": "File not found"}), 404
 
 # Lancer le serveur

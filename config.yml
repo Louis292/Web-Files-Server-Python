@@ -5,3 +5,6 @@ users:
 api_keys:
   user1: "api_key_12345"
   user2: "api_key_67890"
+logging:
+  enabled: true
+  log_file: "logs/app.log"

@@ -56,8 +56,8 @@ pip install flask flask-login werkzeug pyyaml
 # Installation et Lancement
 1. Clonez le projet depuis le dépôt Git :
 ```bash
-git clone <URL_DU_REPOSITORY>
-cd <Dossier_du_Projet>
+git clone github.com/Louis292/Web-Files-Server-Python
+cd Web-Files-Server-Python
 ```
 
 2. Installez les dépendances :

@@ -74,9 +74,6 @@ Créez un fichier ```config.yml``` à la racine du projet avec votre configurati
 
 Exemple de fichier ```config.yml``` :
 
-yaml
-Copier le code
-
 ```YAML
 secret_key: "votre_cle_secrete"
 users:
@@ -85,6 +82,9 @@ users:
 api_keys:
   user1: "api_key_12345"
   user2: "api_key_67890"
+logging:
+  enabled: true
+  log_file: "logs/app.log"
 ```
 
 4. Lancez l'application :

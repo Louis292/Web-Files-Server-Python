@@ -234,4 +234,4 @@ def api_download(subpath):
 # Lancer le serveur
 if __name__ == "__main__":
     load_modules_from_directory("modules")
-    app.run(debug=True)
+    app.run(config.get("debug", False))

@@ -8,3 +8,4 @@ api_keys:
 logging:
   enabled: true
   log_file: "logs/app.log"
+debug: false

@@ -27,6 +27,14 @@ Cette application web vous permet de gérer, télécharger et créer des fichier
 - Un formulaire pour uploader des fichiers.
 - Un bouton pour télécharger chaque fichier.
 
+### 6. **Modules**
+Vous pouvez ajouter tes modules dans le dossier ```modules``` par exemple:
+
+```PYTHON
+def main():
+    print("Hello from exemple_module!")
+```
+
 ---
 
 ## Dépendances

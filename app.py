@@ -5,6 +5,37 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from werkzeug.utils import secure_filename
 import logging
 from logging.handlers import RotatingFileHandler
+import importlib.util
+import sys
+
+# Fonction pour charger dynamiquement tous les modules dans un répertoire et exécuter une fonction spécifique
+def load_modules_from_directory(directory):
+    directory = os.path.abspath(directory)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    
+    for filename in os.listdir(directory):
+        if filename.endswith(".py"):
+            module_name = filename[:-3]
+            module_path = os.path.join(directory, filename)
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+            
+            # Exécuter automatiquement une fonction appelée "main" si elle existe
+            if hasattr(module, "main"):
+                try:
+                    module.main()  # Appelle la fonction "main" du module
+                    if LOGGING_ENABLED:
+                        app.logger.info(f"Executed 'main' in module: {module_name}")
+                except Exception as e:
+                    if LOGGING_ENABLED:
+                        app.logger.error(f"Error executing 'main' in module {module_name}: {e}")
+            else:
+                if LOGGING_ENABLED:
+                    app.logger.info(f"Module loaded but no 'main' function found: {module_name}")
+
 
 # Chargement de la configuration depuis config.yml
 with open("config.yml", "r") as config_file:
@@ -202,4 +233,5 @@ def api_download(subpath):
 
 # Lancer le serveur
 if __name__ == "__main__":
+    load_modules_from_directory("modules")
     app.run(debug=True)

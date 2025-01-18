@@ -1,5 +1,7 @@
 import os
 import yaml
+import uuid
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template, redirect, url_for, send_from_directory, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
@@ -7,6 +9,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import importlib.util
 import sys
+import json
 
 # Fonction pour charger dynamiquement tous les modules dans un répertoire et exécuter une fonction spécifique
 def load_modules_from_directory(directory):
@@ -35,7 +38,6 @@ def load_modules_from_directory(directory):
             else:
                 if LOGGING_ENABLED:
                     app.logger.info(f"Module loaded but no 'main' function found: {module_name}")
-
 
 # Chargement de la configuration depuis config.yml
 with open("config.yml", "r") as config_file:
@@ -85,6 +87,20 @@ def load_user(user_id):
     if user_id in users:
         return User(user_id)
     return None
+
+# Add a ShareLink model
+class ShareLink:
+    def __init__(self, file_path, token):
+        self.file_path = file_path
+        self.token = token
+        self.created_at = datetime.now()
+
+# Store share links in memory (you might want to use a database in production)
+share_links = {}
+
+# Helper function to generate share token
+def generate_share_token():
+    return str(uuid.uuid4())
 
 # Vérification des clés API
 def verify_api_key(api_key):
@@ -140,12 +156,71 @@ def browse(subpath):
         files = os.listdir(current_path)
         return render_template("index.html", files=files, current_path=subpath)
 
-    elif os.path.isfile(current_path) and "download" in request.args:
-        if LOGGING_ENABLED:
-            app.logger.info(f"User {current_user.id} downloaded file: {current_path}")
-        return send_from_directory(os.path.dirname(current_path), os.path.basename(current_path), as_attachment=True)
+    elif os.path.isfile(current_path):
+        if "download" in request.args:
+            if LOGGING_ENABLED:
+                app.logger.info(f"User {current_user.id} downloaded file: {current_path}")
+            return send_from_directory(os.path.dirname(current_path), 
+                                    os.path.basename(current_path), 
+                                    as_attachment=True)
+        else:
+            # Serve the file for viewing
+            return send_from_directory(os.path.dirname(current_path), 
+                                     os.path.basename(current_path))
 
     abort(404)
+
+@app.route("/share/<path:subpath>", methods=["POST"])
+@login_required
+def share_file(subpath):
+    file_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
+    if not os.path.isfile(file_path):
+        return jsonify({"error": "File not found"}), 404
+
+    # Generate a unique token for this share
+    token = generate_share_token()
+    share_links[token] = ShareLink(file_path, token)
+
+    share_url = url_for('shared_file', token=token, _external=True)
+    return jsonify({
+        "message": "Share link created successfully",
+        "share_url": share_url
+    })
+
+@app.route("/shared/<token>")
+def shared_file(token):
+    if token not in share_links:
+        abort(404)
+        
+    share_link = share_links[token]
+    filepath = share_link.file_path
+    filename = os.path.basename(filepath)
+    
+    # Vérification si un fichier est demandé directement pour téléchargement
+    if "download" in request.args:
+        return send_from_directory(
+            os.path.dirname(filepath),
+            filename,
+            as_attachment=True
+        )
+    
+    # Lien direct pour voir le fichier (si c'est un type compatible)
+    if "view" in request.args:
+        return send_from_directory(
+            os.path.dirname(filepath),
+            filename,
+            as_attachment=False
+        )
+    
+    file_url = url_for('shared_file', token=token)
+    
+    return render_template(
+        "shared.html",
+        filename=filename,
+        file_url=file_url,
+        download_url=f"{file_url}?download=true",
+        view_url=f"{file_url}?view=true"
+    )
 
 @app.route("/upload/<path:subpath>", methods=["POST"])
 @login_required
@@ -230,6 +305,12 @@ def api_download(subpath):
         return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath), as_attachment=True)
 
     return jsonify({"error": "File not found"}), 404
+
+@app.route("/upload/", methods=["POST"])
+@login_required
+def upload_default():
+    return upload("")
+
 
 # Lancer le serveur
 if __name__ == "__main__":

@@ -407,7 +407,9 @@ if __name__ == "__main__":
     app.logger.info("Server is starting...")
 
     # Afficher les statistiques en temps réel
-    update_server_status()
+    
+    if config.get("debug", False):
+        update_server_status()
 
     # Démarrer le serveur avec socketio
     socketio.run(app, debug=config.get("debug", False), host="0.0.0.0", port=config.get("port", 5000))

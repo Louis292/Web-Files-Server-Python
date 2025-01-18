@@ -4,66 +4,155 @@
     <title>File Browser</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #007bff;
+            --hover-color: #0056b3;
+            --background-color: #f8f9fa;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --icon-color: #6c757d;
+        }
+
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
         }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
         ul {
             list-style: none;
             padding: 0;
         }
+
         li {
             margin: 10px 0;
             display: flex;
             align-items: center;
-            padding: 8px;
-            border: 1px solid #eee;
-            border-radius: 4px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background-color: white;
         }
+
         li:hover {
-            background-color: #f8f9fa;
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
+        .icon {
+            margin-right: 15px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--icon-color);
+        }
+
+        .file-icon {
+            font-size: 1.2em;
+        }
+
         a {
             text-decoration: none;
-            color: #007bff;
+            color: var(--primary-color);
             margin-right: 10px;
+            flex-grow: 1;
         }
-        a:hover {
-            text-decoration: underline;
-        }
-        .icon {
-            margin-right: 10px;
-            width: 20px;
-        }
+
         .buttons {
             margin-left: auto;
             display: flex;
             gap: 8px;
         }
+
         button {
-            padding: 5px 10px;
-            border: 1px solid #007bff;
-            background-color: #fff;
-            color: #007bff;
-            border-radius: 4px;
+            padding: 8px 15px;
+            border: 1px solid var(--primary-color);
+            background-color: white;
+            color: var(--primary-color);
+            border-radius: 6px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
         }
+
         button:hover {
-            background-color: #007bff;
-            color: #fff;
+            background-color: var(--primary-color);
+            color: white;
         }
-        .share-popup, #createFolderPopup {
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .popup {
             display: none;
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: white;
-            padding: 20px;
-            border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
+            min-width: 300px;
         }
+
+        .popup h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .popup input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
         #overlay {
             display: none;
             position: fixed;
@@ -73,219 +162,242 @@
             height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 999;
-        }
-        .file-input-wrapper button:hover {
-            background-color: #007bff !important;
-            color: #fff !important;
-        }
-        
-        .upload-form button:hover {
-            background-color: #007bff !important;
-            color: #fff !important;
+            backdrop-filter: blur(2px);
         }
 
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-        }
-
-        .file-input-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .file-input-wrapper button {
-            padding: 5px 10px;
-            border: 1px solid #007bff;
-            background-color: #fff;
-            color: #007bff;
-            border-radius: 4px;
-            cursor: pointer;
+        .breadcrumb {
             display: flex;
             align-items: center;
-            gap: 5px;
-            transition: all 0.3s ease;
+            padding: 10px;
+            background-color: white;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .upload-form {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
         }
 
-        .upload-form button {
-            transition: all 0.3s ease;
+        .breadcrumb .separator {
+            margin: 0 10px;
+            color: var(--icon-color);
         }
 
-        input[type="text"] {
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin: 5px 0;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 20px 0;
+        .file-type-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
         }
     </style>
 </head>
 <body>
-    <h1>File Browser</h1>
-    
-    <div class="action-buttons">
-        <div class="file-input-wrapper">
-            <button>
-                <i class="fas fa-upload"></i> Upload File
-                <input type="file" onchange="submitForm(this)">
+    <div class="container">
+        <h1><i class="fas fa-folder-open"></i> File Browser</h1>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+            <a href="/browse/"><i class="fas fa-home"></i></a>
+            {% set path_parts = current_path.split('/') %}
+            {% for part in path_parts %}
+                {% if part %}
+                    <span class="separator">/</span>
+                    <a href="/browse/{{ '/'.join(path_parts[:loop.index]) }}">{{ part }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="action-buttons">
+            <div class="file-input-wrapper">
+                <button>
+                    <i class="fas fa-cloud-upload-alt"></i> Upload File
+                    <input type="file" onchange="submitForm(this)">
+                </button>
+            </div>
+            <button onclick="showCreateFolderDialog()">
+                <i class="fas fa-folder-plus"></i> New Folder
             </button>
         </div>
-        <button onclick="showCreateFolderDialog()">
-            <i class="fas fa-folder-plus"></i> New Folder
-        </button>
-    </div>
 
-    <ul>
-        {% for file in files %}
-        <li>
-            {% if '.' in file %}
-                <i class="fas fa-file icon"></i>
-                <a href="/browse/{{ current_path }}/{{ file }}" target="_blank">{{ file }}</a>
-                <div class="buttons">
-                    <button onclick="shareFile('{{ current_path }}/{{ file }}')">
-                        <i class="fas fa-share-alt"></i> Share
-                    </button>
-                    <a href="/browse/{{ current_path }}/{{ file }}?download=true">
-                        <button>
-                            <i class="fas fa-download"></i> Download
+        <ul>
+            {% for file in files %}
+            <li>
+                {% if '.' in file %}
+                    {% set ext = file.split('.')[-1].lower() %}
+                    <!-- Icônes spécifiques selon l'extension -->
+                    {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+                        <i class="fas fa-image file-type-icon" style="color: #e83e8c;"></i>
+                    {% elif ext in ['pdf'] %}
+                        <i class="fas fa-file-pdf file-type-icon" style="color: #dc3545;"></i>
+                    {% elif ext in ['doc', 'docx'] %}
+                        <i class="fas fa-file-word file-type-icon" style="color: #0366d6;"></i>
+                    {% elif ext in ['xls', 'xlsx'] %}
+                        <i class="fas fa-file-excel file-type-icon" style="color: #28a745;"></i>
+                    {% elif ext in ['ppt', 'pptx'] %}
+                        <i class="fas fa-file-powerpoint file-type-icon" style="color: #fd7e14;"></i>
+                    {% elif ext in ['zip', 'rar', '7z'] %}
+                        <i class="fas fa-file-archive file-type-icon" style="color: #795548;"></i>
+                    {% elif ext in ['mp3', 'wav', 'ogg'] %}
+                        <i class="fas fa-file-audio file-type-icon" style="color: #9c27b0;"></i>
+                    {% elif ext in ['mp4', 'avi', 'mov'] %}
+                        <i class="fas fa-file-video file-type-icon" style="color: #e91e63;"></i>
+                    {% elif ext in ['py', 'js', 'html', 'css', 'java', 'cpp'] %}
+                        <i class="fas fa-file-code file-type-icon" style="color: #0066cc;"></i>
+                    {% elif ext in ['txt', 'md'] %}
+                        <i class="fas fa-file-alt file-type-icon" style="color: #6c757d;"></i>
+                    {% else %}
+                        <i class="fas fa-file file-type-icon" style="color: #6c757d;"></i>
+                    {% endif %}
+                    <a href="/browse/{{ current_path }}/{{ file }}" target="_blank">{{ file }}</a>
+                    <div class="buttons">
+                        <button onclick="shareFile('{{ current_path }}/{{ file }}')">
+                            <i class="fas fa-share-alt"></i> Share
                         </button>
-                    </a>
-                </div>
-            {% else %}
-                <i class="fas fa-folder icon"></i>
-                <a href="/browse/{{ current_path }}/{{ file }}/">{{ file }}/</a>
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
+                        <a href="/browse/{{ current_path }}/{{ file }}?download=true">
+                            <button>
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                        </a>
+                    </div>
+                {% else %}
+                    <i class="fas fa-folder file-type-icon" style="color: #ffc107;"></i>
+                    <a href="/browse/{{ current_path }}/{{ file }}/">{{ file }}/</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
 
-    <!-- Hidden form for file upload -->
-    <form id="uploadForm" method="POST" action="/upload/{{ current_path }}" enctype="multipart/form-data" style="display: none;">
-        <input type="file" name="file">
-    </form>
+        <!-- Hidden form for file upload -->
+        <form id="uploadForm" method="POST" action="/upload/{{ current_path }}" enctype="multipart/form-data" style="display: none;">
+            <input type="file" name="file">
+        </form>
 
-    <!-- Share Popup -->
-    <div id="sharePopup" class="share-popup">
-        <h3>Share Link</h3>
-        <input type="text" id="shareUrl" readonly style="width: 100%; margin: 10px 0;">
-        <button onclick="copyShareLink()">Copy Link</button>
-        <button onclick="closeSharePopup()">Close</button>
+        <!-- Share Popup -->
+        <div id="sharePopup" class="popup">
+            <h3><i class="fas fa-share-alt"></i> Share Link</h3>
+            <input type="text" id="shareUrl" readonly>
+            <div class="buttons" style="justify-content: flex-end; margin-top: 15px;">
+                <button onclick="copyShareLink()">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+                <button onclick="closeSharePopup()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+
+        <!-- Create Folder Popup -->
+        <div id="createFolderPopup" class="popup">
+            <h3><i class="fas fa-folder-plus"></i> Create New Folder</h3>
+            <input type="text" id="folderName" placeholder="Enter folder name">
+            <div class="buttons" style="justify-content: flex-end; margin-top: 15px;">
+                <button onclick="createFolder()">
+                    <i class="fas fa-check"></i> Create
+                </button>
+                <button onclick="closeCreateFolderPopup()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+
+        <div id="overlay"></div>
     </div>
-
-    <!-- Create Folder Popup -->
-    <div id="createFolderPopup" class="share-popup">
-        <h3>Create New Folder</h3>
-        <input type="text" id="folderName" placeholder="Enter folder name" style="width: 100%; margin: 10px 0;">
-        <button onclick="createFolder()">Create</button>
-        <button onclick="closeCreateFolderPopup()">Cancel</button>
-    </div>
-
-    <div id="overlay"></div>
 
     <script>
-    function submitForm(input) {
-        if (input.files.length > 0) {
-            const form = document.getElementById('uploadForm');
-            form.querySelector('input[type=file]').files = input.files;
-            form.submit();
-        }
-    }
-
-    function shareFile(path) {
-        fetch(`/share/${path}`, {
-            method: 'POST',
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('shareUrl').value = data.share_url;
-            document.getElementById('sharePopup').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-    function copyShareLink() {
-        const shareUrl = document.getElementById('shareUrl');
-        shareUrl.select();
-        document.execCommand('copy');
-        alert('Link copied to clipboard!');
-    }
-
-    function closeSharePopup() {
-        document.getElementById('sharePopup').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
-    }
-
-    function showCreateFolderDialog() {
-        document.getElementById('createFolderPopup').style.display = 'block';
-        document.getElementById('overlay').style.display = 'block';
-        document.getElementById('folderName').focus();
-    }
-
-    function closeCreateFolderPopup() {
-        document.getElementById('createFolderPopup').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
-        document.getElementById('folderName').value = '';
-    }
-
-    function createFolder() {
-        const folderName = document.getElementById('folderName').value;
-        if (!folderName) {
-            alert('Please enter a folder name');
-            return;
-        }
-
-        const currentPath = '{{ current_path }}';
-        
-        fetch(`/create_folder/${currentPath}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: `folder_name=${encodeURIComponent(folderName)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-            } else {
-                alert('Folder created successfully');
-                window.location.reload();
+        function submitForm(input) {
+            if (input.files.length > 0) {
+                const form = document.getElementById('uploadForm');
+                form.querySelector('input[type=file]').files = input.files;
+                form.submit();
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Failed to create folder');
-        })
-        .finally(() => {
+        }
+
+        function shareFile(path) {
+            fetch(`/share/${path}`, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('shareUrl').value = data.share_url;
+                document.getElementById('sharePopup').style.display = 'block';
+                document.getElementById('overlay').style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function copyShareLink() {
+            const shareUrl = document.getElementById('shareUrl');
+            shareUrl.select();
+            document.execCommand('copy');
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        }
+
+        function closeSharePopup() {
+            document.getElementById('sharePopup').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function showCreateFolderDialog() {
+            document.getElementById('createFolderPopup').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('folderName').focus();
+        }
+
+        function closeCreateFolderPopup() {
+            document.getElementById('createFolderPopup').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('folderName').value = '';
+        }
+
+        function createFolder() {
+            const folderName = document.getElementById('folderName').value;
+            if (!folderName) {
+                alert('Please enter a folder name');
+                return;
+            }
+
+            const currentPath = '{{ current_path }}';
+            
+            fetch(`/create_folder/${currentPath}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `folder_name=${encodeURIComponent(folderName)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to create folder');
+            })
+            .finally(() => {
+                closeCreateFolderPopup();
+            });
+        }
+
+        document.getElementById('folderName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                createFolder();
+            }
+        });
+
+        // Fermer les popups quand on clique sur l'overlay
+        document.getElementById('overlay').addEventListener('click', function() {
+            closeSharePopup();
             closeCreateFolderPopup();
         });
-    }
-
-    // Add keyboard event listener for the folder name input
-    document.getElementById('folderName').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            createFolder();
-        }
-    });
     </script>
 </body>
 </html>

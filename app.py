@@ -84,6 +84,11 @@ class User(UserMixin):
     def __init__(self, id):
         self.id = id
 
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 @login_manager.user_loader
 def load_user(user_id):
     if user_id in users:

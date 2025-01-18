@@ -10,6 +10,8 @@ from logging.handlers import RotatingFileHandler
 import importlib.util
 import sys
 import json
+from flask_socketio import SocketIO
+import psutil
 
 # Fonction pour charger dynamiquement tous les modules dans un répertoire et exécuter une fonction spécifique
 def load_modules_from_directory(directory):
@@ -98,6 +100,10 @@ class ShareLink:
 # Store share links in memory (you might want to use a database in production)
 share_links = {}
 
+socketio = SocketIO(app)
+
+connected_users = set()
+
 # Helper function to generate share token
 def generate_share_token():
     return str(uuid.uuid4())
@@ -128,6 +134,41 @@ def login():
                 app.logger.warning(f"Authentication failed: {username}")
             return "Invalid credentials", 401
     return render_template("login.html")
+
+@socketio.on('connect')
+def handle_connect():
+    connected_users.add(request.sid)
+    update_server_status()
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    connected_users.discard(request.sid)
+    update_server_status()
+
+def get_network_stats():
+    stats = psutil.net_io_counters()
+    return {
+        "bytes_sent": stats.bytes_sent,
+        "bytes_recv": stats.bytes_recv,
+        "packets_sent": stats.packets_sent,
+        "packets_recv": stats.packets_recv,
+    }
+
+def get_system_stats():
+    return {
+        "cpu_percent": psutil.cpu_percent(interval=1),
+        "memory_usage": psutil.virtual_memory().percent,
+        "disk_usage": psutil.disk_usage(BASE_UPLOAD_FOLDER).percent,
+    }
+
+def update_server_status():
+    server_status = {
+        "connected_users": len(connected_users),
+        "network_stats": get_network_stats(),
+        "system_stats": get_system_stats(),
+    }
+    app.logger.info(f"Server Status: {json.dumps(server_status, indent=4)}")
+    print(f"\n--- Server Status ---\n{json.dumps(server_status, indent=4)}\n")
 
 @app.route("/create_folder/<path:subpath>", methods=["POST"])
 @login_required
@@ -360,7 +401,13 @@ def upload_default():
     return upload("")
 
 
-# Lancer le serveur
 if __name__ == "__main__":
     load_modules_from_directory("modules")
-    app.run(config.get("debug", False))
+    print("Starting server...")
+    app.logger.info("Server is starting...")
+
+    # Afficher les statistiques en temps réel
+    update_server_status()
+
+    # Démarrer le serveur avec socketio
+    socketio.run(app, debug=config.get("debug", False), host="0.0.0.0", port=5000)

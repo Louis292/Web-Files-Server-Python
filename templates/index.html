@@ -52,7 +52,7 @@
             background-color: #007bff;
             color: #fff;
         }
-        .share-popup {
+        .share-popup, #createFolderPopup {
             display: none;
             position: fixed;
             top: 50%;
@@ -117,15 +117,42 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .upload-form button {
             transition: all 0.3s ease;
         }
+
+        input[type="text"] {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
     <h1>File Browser</h1>
+    
+    <div class="action-buttons">
+        <div class="file-input-wrapper">
+            <button>
+                <i class="fas fa-upload"></i> Upload File
+                <input type="file" onchange="submitForm(this)">
+            </button>
+        </div>
+        <button onclick="showCreateFolderDialog()">
+            <i class="fas fa-folder-plus"></i> New Folder
+        </button>
+    </div>
+
     <ul>
         {% for file in files %}
         <li>
@@ -150,13 +177,12 @@
         {% endfor %}
     </ul>
 
-    <form method="POST" action="/upload/{{ current_path }}" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Upload</button>
+    <!-- Hidden form for file upload -->
+    <form id="uploadForm" method="POST" action="/upload/{{ current_path }}" enctype="multipart/form-data" style="display: none;">
+        <input type="file" name="file">
     </form>
 
-
-    <div id="overlay"></div>
+    <!-- Share Popup -->
     <div id="sharePopup" class="share-popup">
         <h3>Share Link</h3>
         <input type="text" id="shareUrl" readonly style="width: 100%; margin: 10px 0;">
@@ -164,7 +190,25 @@
         <button onclick="closeSharePopup()">Close</button>
     </div>
 
+    <!-- Create Folder Popup -->
+    <div id="createFolderPopup" class="share-popup">
+        <h3>Create New Folder</h3>
+        <input type="text" id="folderName" placeholder="Enter folder name" style="width: 100%; margin: 10px 0;">
+        <button onclick="createFolder()">Create</button>
+        <button onclick="closeCreateFolderPopup()">Cancel</button>
+    </div>
+
+    <div id="overlay"></div>
+
     <script>
+    function submitForm(input) {
+        if (input.files.length > 0) {
+            const form = document.getElementById('uploadForm');
+            form.querySelector('input[type=file]').files = input.files;
+            form.submit();
+        }
+    }
+
     function shareFile(path) {
         fetch(`/share/${path}`, {
             method: 'POST',
@@ -189,6 +233,59 @@
         document.getElementById('sharePopup').style.display = 'none';
         document.getElementById('overlay').style.display = 'none';
     }
+
+    function showCreateFolderDialog() {
+        document.getElementById('createFolderPopup').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+        document.getElementById('folderName').focus();
+    }
+
+    function closeCreateFolderPopup() {
+        document.getElementById('createFolderPopup').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('folderName').value = '';
+    }
+
+    function createFolder() {
+        const folderName = document.getElementById('folderName').value;
+        if (!folderName) {
+            alert('Please enter a folder name');
+            return;
+        }
+
+        const currentPath = '{{ current_path }}';
+        
+        fetch(`/create_folder/${currentPath}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `folder_name=${encodeURIComponent(folderName)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                alert('Folder created successfully');
+                window.location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to create folder');
+        })
+        .finally(() => {
+            closeCreateFolderPopup();
+        });
+    }
+
+    // Add keyboard event listener for the folder name input
+    document.getElementById('folderName').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            createFolder();
+        }
+    });
     </script>
 </body>
 </html>

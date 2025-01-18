@@ -129,6 +129,54 @@ def login():
             return "Invalid credentials", 401
     return render_template("login.html")
 
+@app.route("/create_folder/<path:subpath>", methods=["POST"])
+@login_required
+def create_folder(subpath):
+    # Log pour vérifier le chemin reçu
+    if LOGGING_ENABLED:
+        app.logger.info(f"Attempting to create folder in path: {subpath}")
+
+    # Calcul du chemin absolu du dossier
+    current_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
+    current_path = os.path.abspath(current_path)
+
+    # Vérification si le chemin est valide et sous le répertoire de base
+    if not current_path.startswith(os.path.abspath(BASE_UPLOAD_FOLDER)):
+        if LOGGING_ENABLED:
+            app.logger.error(f"Invalid path: {current_path}. Path is outside the allowed directory.")
+        abort(404)
+
+    # Récupérer le nom du nouveau dossier depuis le formulaire
+    folder_name = request.form.get('folder_name')
+    if not folder_name:
+        return jsonify({"error": "Folder name is required"}), 400
+        
+    # Sécuriser le nom du dossier
+    folder_name = secure_filename(folder_name)
+    
+    # Créer le chemin complet pour le nouveau dossier
+    new_folder_path = os.path.join(current_path, folder_name)
+    
+    # Vérifier si le dossier existe déjà
+    if os.path.exists(new_folder_path):
+        return jsonify({"error": "Folder already exists"}), 400
+        
+    try:
+        # Créer le dossier
+        os.makedirs(new_folder_path)
+        if LOGGING_ENABLED:
+            app.logger.info(f"Created new folder: {new_folder_path}")
+        return jsonify({"message": "Folder created successfully", "folder_name": folder_name})
+    except Exception as e:
+        if LOGGING_ENABLED:
+            app.logger.error(f"Error creating folder: {e}")
+        return jsonify({"error": "Failed to create folder"}), 500
+
+@app.route("/create_folder/", methods=["POST"])
+@login_required
+def create_folder_root():
+    return create_folder("")
+
 @app.route("/logout")
 @login_required
 def logout():

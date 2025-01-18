@@ -1,4 +1,4 @@
-# File Browser Web Application
+# File Browser Web Application [📁]
 
 ## Description
 Cette application web vous permet de gérer, télécharger et créer des fichiers dans un répertoire spécifique du serveur. Les utilisateurs peuvent se connecter avec un nom d'utilisateur et un mot de passe, parcourir des fichiers et des dossiers, télécharger des fichiers, ou créer de nouveaux fichiers à partir de l'interface. Un système de clés API est également intégré pour permettre des uploads à distance.
@@ -46,6 +46,8 @@ Voici les dépendances du projet :
 - **Werkzeug** : Fournit des outils de manipulation de fichiers, notamment la sécurisation des noms de fichiers.
 - **PyYAML** : Utilisé pour charger la configuration depuis un fichier YAML.
 - **Flask-WTF** : Gère les formulaires web (facultatif si vous voulez l'intégrer).
+- **flask-socketio** : permet de récupéré le status et l'état du serveur
+- **pyutil** : récupere les informations du serveur 
 
 ### Installation des dépendances
 
@@ -83,16 +85,31 @@ Créez un fichier ```config.yml``` à la racine du projet avec votre configurati
 Exemple de fichier ```config.yml``` :
 
 ```YAML
+# Web Server fils by Louis292 V1.0.0:
+
+# API key
 secret_key: "votre_cle_secrete"
+
+# Utilisateurs:
 users:
   admin: "password"
   user1: "user1password"
+
+# API multiple key:
 api_keys:
   user1: "api_key_12345"
   user2: "api_key_67890"
+
+# Logs:
 logging:
   enabled: true
   log_file: "logs/app.log"
+
+# Port du serveur:
+port: 5000
+
+# Développer mode:
+debug: false
 ```
 
 4. Lancez l'application :
@@ -100,7 +117,7 @@ logging:
 Démarrez l'application Flask en mode debug :
 
 ```bash
-python start.py
+python app.py
 ```
 
 Ou ouvrer le fichier ```start.bat```

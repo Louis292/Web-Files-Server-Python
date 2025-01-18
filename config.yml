@@ -9,3 +9,4 @@ logging:
   enabled: true
   log_file: "logs/app.log"
 debug: false
+port: 5000

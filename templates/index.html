@@ -190,6 +190,52 @@
             margin-right: 10px;
             font-size: 1.2em;
         }
+                .drop-zone {
+            border: 2px dashed var(--primary-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: rgba(0, 123, 255, 0.05);
+            transition: all 0.3s ease;
+            display: none; /* Caché par défaut */
+        }
+
+        .drop-zone.drag-over {
+            background-color: rgba(0, 123, 255, 0.1);
+            border-color: var(--hover-color);
+            transform: scale(1.02);
+        }
+
+        .drop-zone i {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 18px;
+        }
+
+        .upload-progress {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background-color: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
     </style>
 </head>
 <body>
@@ -206,6 +252,17 @@
                     <a href="/browse/{{ '/'.join(path_parts[:loop.index]) }}">{{ part }}</a>
                 {% endif %}
             {% endfor %}
+        </div>
+
+                <div class="drop-zone">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Glissez et déposez vos fichiers ici</p>
+            <div class="upload-progress">
+                <div class="progress-bar">
+                    <div class="progress-bar-fill"></div>
+                </div>
+                <p class="upload-status"></p>
+            </div>
         </div>
 
         <div class="action-buttons">
@@ -399,6 +456,99 @@
             closeSharePopup();
             closeCreateFolderPopup();
         });
+                document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.querySelector('.drop-zone');
+            const container = document.querySelector('.container');
+
+            // Afficher la zone de drop lors du drag
+            container.addEventListener('dragenter', function(e) {
+                e.preventDefault();
+                dropZone.style.display = 'block';
+            });
+
+            // Gérer les événements de la zone de drop
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                
+                const files = e.dataTransfer.files;
+                uploadFiles(files);
+            });
+
+            // Cacher la zone de drop quand la souris quitte le container
+            container.addEventListener('mouseleave', function() {
+                setTimeout(() => {
+                    dropZone.style.display = 'none';
+                }, 100);
+            });
+        });
+
+        function uploadFiles(files) {
+            const currentPath = '{{ current_path }}';
+            const progressBar = document.querySelector('.progress-bar-fill');
+            const uploadStatus = document.querySelector('.upload-status');
+            const uploadProgress = document.querySelector('.upload-progress');
+
+            uploadProgress.style.display = 'block';
+
+            // Créer une promesse pour chaque fichier
+            const uploadPromises = Array.from(files).map(file => {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                return fetch(`/upload/${currentPath}`, {
+                    method: 'POST',
+                    body: formData
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur lors de l'upload de ${file.name}`);
+                    }
+                    return file.name;
+                });
+            });
+
+            // Gérer tous les uploads
+            Promise.all(uploadPromises)
+                .then(uploadedFiles => {
+                    progressBar.style.width = '100%';
+                    uploadStatus.textContent = `${uploadedFiles.length} fichier(s) uploadé(s) avec succès!`;
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    uploadStatus.textContent = `Erreur lors de l'upload: ${error.message}`;
+                    uploadStatus.style.color = 'red';
+                })
+                .finally(() => {
+                    setTimeout(() => {
+                        document.querySelector('.drop-zone').style.display = 'none';
+                        uploadProgress.style.display = 'none';
+                        progressBar.style.width = '0%';
+                    }, 2000);
+                });
+
+            // Simuler la progression
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                if (progress >= 90) {
+                    clearInterval(interval);
+                }
+                progressBar.style.width = `${progress}%`;
+            }, 100);
+        }
     </script>
 </body>
 </html>

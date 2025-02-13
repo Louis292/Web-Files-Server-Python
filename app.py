@@ -89,6 +89,30 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+@app.route("/delete/<path:subpath>", methods=["POST"])
+@login_required
+def delete_item(subpath):
+    item_path = os.path.join(BASE_UPLOAD_FOLDER, subpath)
+    item_path = os.path.abspath(item_path)
+
+    if not item_path.startswith(os.path.abspath(BASE_UPLOAD_FOLDER)):
+        abort(404)
+
+    try:
+        if os.path.isfile(item_path):
+            os.remove(item_path)
+        elif os.path.isdir(item_path):
+            import shutil
+            shutil.rmtree(item_path)
+            
+        if LOGGING_ENABLED:
+            app.logger.info(f"User {current_user.id} deleted: {item_path}")
+            
+        return jsonify({"message": "Item deleted successfully"})
+    except Exception as e:
+        if LOGGING_ENABLED:
+            app.logger.error(f"Error deleting item: {e}")
+        return jsonify({"error": "Failed to delete item"}), 500
 @login_manager.user_loader
 def load_user(user_id):
     if user_id in users:
